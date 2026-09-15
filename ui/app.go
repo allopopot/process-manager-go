@@ -60,8 +60,11 @@ func (m App) View() tea.View {
 	}
 	s += "\n\n"
 
-	if m.activeTab == 0 {
+	switch m.activeTab {
+	case 0:
 		s += views.RenderHostInfo()
+	case 1:
+		s += views.RenderStorageInfo()
 	}
 
 	return tea.NewView(s)
@@ -70,7 +73,7 @@ func (m App) View() tea.View {
 
 func AppInit() App {
 	return App{
-		activeTab: 0,
+		activeTab: 1,
 		tabList:   []string{"Host Info", "Storage", "CPU", "Memory", "Network", "Tasks"},
 	}
 }
