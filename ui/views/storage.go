@@ -37,7 +37,7 @@ func RenderStorageInfo() string {
 	s += mutedStyle.Render(strings.Repeat("─", colDevice+colMountpoint+colFS+colTotal+colUsed+colFree+colUsage))
 	s += "\n"
 	s += headerStyle.Render(
-		fmt.Sprintf("%-*s%-*s%-*s%-*s%-*s%-*s%s",
+		fmt.Sprintf("%-*s %-*s %-*s %-*s %-*s %-*s%s",
 			colDevice, "Device",
 			colMountpoint, "Mount",
 			colFS, "FS",
@@ -57,7 +57,7 @@ func RenderStorageInfo() string {
 		if err != nil {
 			continue
 		}
-		row := fmt.Sprintf("%-*s%-*s%-*s%-*s%-*s%-*s",
+		row := fmt.Sprintf("%-*s %-*s %-*s %-*s %-*s %-*s",
 			colDevice, truncate(p.Device, colDevice-1),
 			colMountpoint, truncate(p.Mountpoint, colMountpoint-1),
 			colFS, truncate(p.Fstype, colFS-1),
