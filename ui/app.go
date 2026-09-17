@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"strconv"
+	"time"
 
 	"allopopot.com/proc-man/config"
 	"allopopot.com/proc-man/ui/views"
@@ -16,12 +17,23 @@ type App struct {
 	tabList   []string
 }
 
+type tickMsg struct{}
+
+func tick() tea.Cmd {
+	return tea.Tick(time.Second, func(time.Time) tea.Msg {
+		return tickMsg{}
+	})
+}
+
 func (m App) Init() tea.Cmd {
-	return nil
+	return tick()
 }
 
 func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	case tickMsg:
+		return m, tick()
 
 	case tea.KeyPressMsg:
 
