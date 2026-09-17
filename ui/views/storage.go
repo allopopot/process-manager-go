@@ -61,9 +61,9 @@ func RenderStorageInfo() string {
 			colDevice, truncate(p.Device, colDevice-1),
 			colMountpoint, truncate(p.Mountpoint, colMountpoint-1),
 			colFS, truncate(p.Fstype, colFS-1),
-			colTotal, formatGiB(usage.Total),
-			colUsed, formatGiB(usage.Used),
-			colFree, formatGiB(usage.Free),
+			colTotal, formatBytes(usage.Total),
+			colUsed, formatBytes(usage.Used),
+			colFree, formatBytes(usage.Free),
 		)
 		s += textStyle.Render(row) + storageBar(usage.UsedPercent, 20)
 		s += "\n"
@@ -78,12 +78,6 @@ func truncate(s string, max int) string {
 		return s
 	}
 	return s[:max-1] + "…"
-}
-
-// formatGiB formats bytes as a GiB string.
-func formatGiB(bytes uint64) string {
-	gib := float64(bytes) / (1 << 30)
-	return fmt.Sprintf("%.1f GiB", gib)
 }
 
 // storageBar renders a fixed-width progress bar with a percentage label.
@@ -105,4 +99,25 @@ func storageBar(pct float64, width int) string {
 		lipgloss.NewStyle().Foreground(config.ColorMuted).Render(strings.Repeat("░", width-filled))
 
 	return fmt.Sprintf("%s %5.1f%%", bar, pct)
+}
+
+func formatBytes(bytes uint64) string {
+	const (
+		KB = 1024
+		MB = KB * 1024
+		GB = MB * 1024
+		TB = GB * 1024
+	)
+	switch {
+	case bytes >= TB:
+		return fmt.Sprintf("%.2f TiB", float64(bytes)/float64(TB))
+	case bytes >= GB:
+		return fmt.Sprintf("%.2f GiB", float64(bytes)/float64(GB))
+	case bytes >= MB:
+		return fmt.Sprintf("%.2f MiB", float64(bytes)/float64(MB))
+	case bytes >= KB:
+		return fmt.Sprintf("%.2f KiB", float64(bytes)/float64(KB))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
 }
