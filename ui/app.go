@@ -15,6 +15,8 @@ import (
 type App struct {
 	activeTab int
 	tabList   []string
+	width     int
+	height    int
 }
 
 type tickMsg struct{}
@@ -31,6 +33,11 @@ func (m App) Init() tea.Cmd {
 
 func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 
 	case tickMsg:
 		return m, tick()
@@ -81,7 +88,12 @@ func (m App) View() tea.View {
 		s += views.RenderCPUInfo()
 	}
 
-	return tea.NewView(s)
+	return tea.NewView(
+		lipgloss.NewStyle().
+			Width(m.width).
+			Height(m.height).
+			Render(s),
+	)
 
 }
 
