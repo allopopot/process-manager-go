@@ -88,6 +88,8 @@ func (m App) View() tea.View {
 		s += views.RenderCPUInfo()
 	case 3:
 		s += views.RenderMemoryInfo()
+	case 4:
+		s += views.RenderNetworkInfo()
 	}
 
 	return tea.NewView(
@@ -101,7 +103,7 @@ func (m App) View() tea.View {
 
 func AppInit() App {
 	return App{
-		activeTab: 3,
+		activeTab: 4,
 		tabList:   []string{"Host Info", "Storage", "CPU", "Memory", "Network", "Tasks"},
 	}
 }
