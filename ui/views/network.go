@@ -10,11 +10,14 @@ import (
 	psnet "github.com/shirou/gopsutil/v4/net"
 )
 
-// prevCounters and prevTime hold the last snapshot for rate calculation.
+// prevCounters, prevTime and lastRateMap hold the last snapshot for rate calculation.
 var (
 	prevCounters map[string]psnet.IOCountersStat
 	prevTime     time.Time
+	lastRateMap  map[string]rates
 )
+
+type rates struct{ txBps, rxBps float64 }
 
 func RenderNetworkInfo() string {
 	const ifaceW, addrW, rateW, totalW = 14, 22, 14, 14
@@ -28,26 +31,25 @@ func RenderNetworkInfo() string {
 		cc[s.Name] = s
 	}
 
-	// Compute per-interface rates if we have a previous snapshot.
-	type rates struct{ txBps, rxBps float64 }
-	rateMap := make(map[string]rates)
-	if prevCounters != nil {
-		elapsed := now.Sub(prevTime).Seconds()
-		if elapsed > 0 {
-			for name, cur := range cc {
-				if prev, ok := prevCounters[name]; ok {
-					rateMap[name] = rates{
-						txBps: float64(cur.BytesSent-prev.BytesSent) / elapsed,
-						rxBps: float64(cur.BytesRecv-prev.BytesRecv) / elapsed,
-					}
+	// Compute per-interface rates if enough time has passed
+	if prevCounters == nil {
+		prevCounters = cc
+		prevTime = now
+		lastRateMap = make(map[string]rates)
+	} else if elapsed := now.Sub(prevTime).Seconds(); elapsed >= 0.5 {
+		rateMap := make(map[string]rates)
+		for name, cur := range cc {
+			if prev, ok := prevCounters[name]; ok {
+				rateMap[name] = rates{
+					txBps: float64(cur.BytesSent-prev.BytesSent) / elapsed,
+					rxBps: float64(cur.BytesRecv-prev.BytesRecv) / elapsed,
 				}
 			}
 		}
+		lastRateMap = rateMap
+		prevCounters = cc
+		prevTime = now
 	}
-
-	// Save snapshot for next call.
-	prevCounters = cc
-	prevTime = now
 
 	ifaces, _ := psnet.Interfaces()
 
@@ -73,7 +75,7 @@ func RenderNetworkInfo() string {
 
 	for _, iface := range ifaces {
 		c := cc[iface.Name]
-		r := rateMap[iface.Name]
+		r := lastRateMap[iface.Name]
 
 		addrs := iface.Addrs
 		if len(addrs) == 0 {

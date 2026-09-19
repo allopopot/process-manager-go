@@ -3,10 +3,17 @@ package views
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"allopopot.com/proc-man/config"
 	"charm.land/lipgloss/v2"
 	"github.com/shirou/gopsutil/cpu"
+)
+
+var (
+	lastOverall []float64
+	lastPerCore []float64
+	lastCPUTime time.Time
 )
 
 func RenderCPUInfo() string {
@@ -18,7 +25,7 @@ func RenderCPUInfo() string {
 
 	info, _ := cpu.Info()
 
-	if info[0].ModelName != "" {
+	if len(info) > 0 && info[0].ModelName != "" {
 		pp, _ := cpu.Counts(false)
 		lp, _ := cpu.Counts(true)
 		meta := fmt.Sprintf("  %s   Physical: %d   Logical: %d   Base: %.0f MHz",
@@ -32,15 +39,22 @@ func RenderCPUInfo() string {
 	}
 	sb.WriteString("\n")
 
-	overallCPUPercent, _ := cpu.Percent(0, false)
-	sb.WriteString(fmt.Sprintf("Total %-2s", ""))
-	sb.WriteString(storageBar(overallCPUPercent[0], 60))
-	sb.WriteString("\n")
-	sb.WriteString(strings.Repeat("─", 80))
-	sb.WriteString("\n")
+	now := time.Now()
+	if lastOverall == nil || now.Sub(lastCPUTime) >= 500*time.Millisecond {
+		lastOverall, _ = cpu.Percent(0, false)
+		lastPerCore, _ = cpu.Percent(0, true)
+		lastCPUTime = now
+	}
 
-	perCoreCPUPercent, _ := cpu.Percent(0, true)
-	for i, px := range perCoreCPUPercent {
+	if len(lastOverall) > 0 {
+		sb.WriteString(fmt.Sprintf("Total %-2s", ""))
+		sb.WriteString(storageBar(lastOverall[0], 60))
+		sb.WriteString("\n")
+		sb.WriteString(strings.Repeat("─", 80))
+		sb.WriteString("\n")
+	}
+
+	for i, px := range lastPerCore {
 		sb.WriteString(fmt.Sprintf("Core %d %-1s", i, ""))
 		sb.WriteString(storageBar(px, 60))
 		sb.WriteString("\n")

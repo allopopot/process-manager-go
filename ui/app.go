@@ -17,6 +17,7 @@ type App struct {
 	tabList   []string
 	width     int
 	height    int
+	tasks     views.TasksModel
 }
 
 type tickMsg struct{}
@@ -28,42 +29,68 @@ func tick() tea.Cmd {
 }
 
 func (m App) Init() tea.Cmd {
-	return tick()
+	return tea.Batch(
+		tick(),
+		func() tea.Msg {
+			return views.FetchTasks()
+		},
+	)
 }
 
 func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
 
+	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.tasks = m.tasks.SetSize(m.width, m.height-4)
 		return m, nil
 
 	case tickMsg:
-		return m, tick()
+		cmds = append(cmds, tick())
+		cmds = append(cmds, func() tea.Msg {
+			return views.FetchTasks()
+		})
+		// update view too
+		return m, tea.Batch(cmds...)
+
+	case views.TasksUpdateMsg:
+		m.tasks, cmd = m.tasks.Update(msg)
+		cmds = append(cmds, cmd)
+		return m, tea.Batch(cmds...)
 
 	case tea.KeyPressMsg:
+		isSearching := m.tasks.IsSearching()
+		if m.activeTab == 5 && isSearching {
+			m.tasks, cmd = m.tasks.Update(msg)
+			cmds = append(cmds, cmd)
+			return m, tea.Batch(cmds...)
+		}
 
 		switch msg.String() {
-
 		case "1", "2", "3", "4", "5", "6":
 			n, _ := strconv.Atoi(msg.String())
 			if n >= 0 && n < len(m.tabList)+1 {
 				m.activeTab = n - 1
 			}
+			return m, nil
 
 		case "ctrl+c", "q":
 			return m, tea.Quit
-
 		}
-
 	}
 
-	return m, nil
+	if m.activeTab == 5 {
+		m.tasks, cmd = m.tasks.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	return m, tea.Batch(cmds...)
 }
 
 func (m App) View() tea.View {
-
 	s := ""
 	s += lipgloss.NewStyle().SetString("  Process Manager (Proc Man)  ").Background(config.ColorAccent).Render()
 	s += "\n"
@@ -90,6 +117,8 @@ func (m App) View() tea.View {
 		s += views.RenderMemoryInfo()
 	case 4:
 		s += views.RenderNetworkInfo()
+	case 5:
+		s += m.tasks.View()
 	}
 
 	return tea.NewView(
@@ -98,12 +127,12 @@ func (m App) View() tea.View {
 			Height(m.height).
 			Render(s),
 	)
-
 }
 
 func AppInit() App {
 	return App{
-		activeTab: 4,
+		activeTab: 5,
 		tabList:   []string{"Host Info", "Storage", "CPU", "Memory", "Network", "Tasks"},
+		tasks:     views.NewTasksModel(),
 	}
 }
